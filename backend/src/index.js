@@ -5,6 +5,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
+const missionsRoutes = require('./routes/missions');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,6 +20,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/missions', missionsRoutes);
 
 app.listen(PORT, () => {
   console.log(`CarePilot Pro API démarrée sur le port ${PORT}`);
