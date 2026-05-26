@@ -56,6 +56,9 @@ export default function PointeusePanel() {
             </div>
           ))}
         </div>
+        <p className="text-xs text-center pt-1" style={{ color: "#94A3B8" }}>
+          Fonctionnalité disponible — développement complet prévu phase 2
+        </p>
       </div>
     </div>
   );
