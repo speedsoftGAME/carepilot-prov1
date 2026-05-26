@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const missionsRoutes = require('./routes/missions');
 const vehiclesRoutes = require('./routes/vehicles');
 const dispatchRoutes = require('./routes/dispatch');
+const okcareRoutes = require('./routes/okcare');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/missions', missionsRoutes);
 app.use('/api/vehicles', vehiclesRoutes);
 app.use('/api/dispatch', dispatchRoutes);
+app.use('/api/okcare', okcareRoutes);
 
 app.listen(PORT, () => {
   console.log(`CarePilot Pro API démarrée sur le port ${PORT}`);
