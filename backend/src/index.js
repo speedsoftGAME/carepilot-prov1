@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
 
+const authRoutes = require('./routes/auth');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -15,6 +17,8 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', version: '1.0.0', service: 'CarePilot Pro API' });
 });
+
+app.use('/api/auth', authRoutes);
 
 app.listen(PORT, () => {
   console.log(`CarePilot Pro API démarrée sur le port ${PORT}`);
