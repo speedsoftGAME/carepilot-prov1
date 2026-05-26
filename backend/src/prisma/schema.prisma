@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id             String          @id @default(cuid())
+  name           String
+  siret          String?
+  address        String?
+  phone          String?
+  email          String?
+  plan           String          @default("starter")
+  stripeId       String?
+  createdAt      DateTime        @default(now())
+  users          User[]
+  vehicles       Vehicle[]
+  employees      Employee[]
+  missions       Mission[]
+  patients       Patient[]
+  etablissements Etablissement[]
+  alerts         Alert[]
+  imperatifs     Imperatif[]
+  okcareUsage    OKCareUsage[]
+  bonTransports  BonTransport[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("dispatcher")
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Vehicle {
+  id        String    @id @default(cuid())
+  name      String
+  type      String    @default("AMB")
+  status    String    @default("available")
+  lat       Float?
+  lng       Float?
+  crew      String?
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id])
+  missions  Mission[]
+  createdAt DateTime  @default(now())
+}
+
+model Employee {
+  id        String     @id @default(cuid())
+  name      String
+  role      String?
+  pin       String
+  companyId String
+  company   Company    @relation(fields: [companyId], references: [id])
+  pointages Pointage[]
+  planCells PlanCell[]
+  createdAt DateTime   @default(now())
+}
+
+model Mission {
+  id          String   @id @default(cuid())
+  numero      String
+  date        String
+  time        String?
+  patient     String
+  patNom      String?
+  patPrenom   String?
+  nss         String?
+  mutuelle    String?
+  numMutuelle String?
+  ddn         String?
+  phone       String?
+  adresse     String?
+  medecin     String?
+  obs         String?
+  from        String
+  to          String
+  priority    String   @default("normal")
+  type        String   @default("AMB")
+  trajet      String   @default("aller")
+  status      String   @default("waiting")
+  notes       String?
+  ca          Float    @default(0)
+  vehicleId   String?
+  vehicle     Vehicle? @relation(fields: [vehicleId], references: [id])
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Patient {
+  id        String   @id @default(cuid())
+  nom       String
+  prenom    String?
+  nss       String?
+  mutuelle  String?
+  ddn       String?
+  tel       String?
+  adresse   String?
+  medecin   String?
+  obs       String?
+  poids     Float?
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Etablissement {
+  id        String   @id @default(cuid())
+  nom       String
+  type      String   @default("hopital")
+  adresse   String?
+  tel       String?
+  service   String?
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Pointage {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  date       String
+  time       String
+  type       String
+  companyId  String
+  createdAt  DateTime @default(now())
+}
+
+model PlanCell {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  date       String
+  hours      Float    @default(0)
+  type       String   @default("work")
+  companyId  String
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, date])
+}
+
+model BonTransport {
+  id        String   @id @default(cuid())
+  numero    String
+  missionId String?
+  patient   String
+  date      String
+  from      String?
+  to        String?
+  amount    Float    @default(0)
+  status    String   @default("pending")
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Alert {
+  id        String   @id @default(cuid())
+  type      String   @default("info")
+  title     String
+  message   String?
+  read      Boolean  @default(false)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Imperatif {
+  id        String   @id @default(cuid())
+  desc      String
+  remind    Int      @default(30)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model OKCareUsage {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+  month     String
+  count     Int     @default(0)
+
+  @@unique([companyId, month])
+}

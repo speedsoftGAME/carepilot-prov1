@@ -1,0 +1,25 @@
+# Dépendances
+node_modules/
+*/node_modules/
+
+# Environnement (ne jamais committer les clés !)
+.env
+backend/.env
+frontend/.env
+
+# Prisma
+backend/migrations/
+*.db
+
+# Build
+dist/
+build/
+.vite/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
