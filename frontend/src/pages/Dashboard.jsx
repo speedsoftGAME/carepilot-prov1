@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import useStore from '../store/useStore.js'
+import { useMissions } from '../hooks/useMissions.js'
+import { useVehicles } from '../hooks/useVehicles.js'
 import Header from '../components/layout/Header.jsx'
 import StatsBar from '../components/layout/StatsBar.jsx'
 import TabBar from '../components/layout/TabBar.jsx'
@@ -42,6 +44,8 @@ const PANELS = {
 export default function Dashboard() {
   const activeTab = useStore(s => s.activeTab)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  useMissions()
+  useVehicles()
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#F0F4FF' }}>
