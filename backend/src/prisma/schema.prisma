@@ -16,6 +16,9 @@ model Company {
   email          String?
   plan           String          @default("starter")
   stripeId       String?
+  primaryColor   String?
+  logoUrl        String?
+  appName        String?
   createdAt      DateTime        @default(now())
   users          User[]
   vehicles       Vehicle[]
@@ -27,6 +30,9 @@ model Company {
   imperatifs     Imperatif[]
   okcareUsage    OKCareUsage[]
   bonTransports  BonTransport[]
+  sites          Site[]
+  apiKeys        ApiKey[]
+  samuConfig     SamuConfig?
 }
 
 model User {
@@ -50,6 +56,8 @@ model Vehicle {
   crew      String?
   companyId String
   company   Company   @relation(fields: [companyId], references: [id])
+  siteId    String?
+  site      Site?     @relation(fields: [siteId], references: [id])
   missions  Mission[]
   createdAt DateTime  @default(now())
 }
@@ -61,9 +69,44 @@ model Employee {
   pin       String
   companyId String
   company   Company    @relation(fields: [companyId], references: [id])
+  siteId    String?
+  site      Site?      @relation(fields: [siteId], references: [id])
   pointages Pointage[]
   planCells PlanCell[]
   createdAt DateTime   @default(now())
+}
+
+model Site {
+  id        String     @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  companyId String
+  company   Company    @relation(fields: [companyId], references: [id])
+  vehicles  Vehicle[]
+  employees Employee[]
+  missions  Mission[]
+  createdAt DateTime   @default(now())
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  key       String    @unique
+  name      String
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id])
+  lastUsed  DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model SamuConfig {
+  id          String   @id @default(cuid())
+  companyId   String   @unique
+  company     Company  @relation(fields: [companyId], references: [id])
+  endpointUrl String?
+  token       String?
+  enabled     Boolean  @default(false)
+  createdAt   DateTime @default(now())
 }
 
 model Mission {
@@ -92,6 +135,8 @@ model Mission {
   ca          Float    @default(0)
   vehicleId   String?
   vehicle     Vehicle? @relation(fields: [vehicleId], references: [id])
+  siteId      String?
+  site        Site?    @relation(fields: [siteId], references: [id])
   companyId   String
   company     Company  @relation(fields: [companyId], references: [id])
   createdAt   DateTime @default(now())

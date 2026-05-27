@@ -14,10 +14,12 @@ const useStore = create(
       activeTab: 'missions',
       toasts: [],
       socketConnected: false,
+      activeSiteId: null,
 
       // Data
       missions: [],
       vehicles: [],
+      sites: [],
 
       // Auth actions
       setAuth: (data) => set({
@@ -31,6 +33,8 @@ const useStore = create(
 
       // UI actions
       setActiveTab: (tab) => set({ activeTab: tab }),
+      setActiveSiteId: (id) => set({ activeSiteId: id }),
+      setSites: (sites) => set({ sites }),
 
       // Toast
       addToast: (message, type = 'info') => {

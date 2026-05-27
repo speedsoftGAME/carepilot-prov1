@@ -18,6 +18,11 @@ const employeesRoutes = require('./routes/employees');
 const pointageRoutes = require('./routes/pointage');
 const planningRoutes = require('./routes/planning');
 const statsRoutes = require('./routes/stats');
+const sitesRoutes = require('./routes/sites');
+const apiKeysRoutes = require('./routes/apikeys');
+const publicRoutes = require('./routes/public');
+const settingsRoutes = require('./routes/settings');
+const samuRoutes = require('./routes/samu');
 
 const app = express();
 const httpServer = createServer(app);
@@ -46,6 +51,11 @@ app.use('/api/employees', employeesRoutes);
 app.use('/api/pointage', pointageRoutes);
 app.use('/api/planning', planningRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/sites', sitesRoutes);
+app.use('/api/apikeys', apiKeysRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/samu', samuRoutes);
 
 // ─── Socket.io — GPS temps réel ─────────────────────────────────────────────
 const io = new Server(httpServer, {

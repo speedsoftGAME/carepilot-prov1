@@ -15,6 +15,7 @@ const TABS = [
   { id: 'j1',              label: 'J+1',             icon: '🔮' },
   { id: 'imperatifs',      label: 'Impératifs',      icon: '⚡' },
   { id: 'alertes',         label: 'Alertes',         icon: '🔔' },
+  { id: 'parametres',      label: 'Paramètres',      icon: '⚙️' },
 ]
 
 export default function TabBar() {

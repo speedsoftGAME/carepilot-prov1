@@ -19,6 +19,7 @@ import PlanningPanel from './panels/PlanningPanel.jsx'
 import J1Panel from './panels/J1Panel.jsx'
 import ImperatifsPanel from './panels/ImperatifsPanel.jsx'
 import AlertesPanel from './panels/AlertesPanel.jsx'
+import ParametresPanel from './panels/ParametresPanel.jsx'
 
 const PANELS = {
   missions:       <MissionsPanel />,
@@ -35,6 +36,7 @@ const PANELS = {
   j1:             <J1Panel />,
   imperatifs:     <ImperatifsPanel />,
   alertes:        <AlertesPanel />,
+  parametres:     <ParametresPanel />,
 }
 
 export default function Dashboard() {

@@ -85,7 +85,7 @@ router.post('/login', async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { company: { select: { id: true, name: true, plan: true } } },
+      include: { company: { select: { id: true, name: true, plan: true, primaryColor: true, logoUrl: true, appName: true } } },
     });
 
     if (!user) {
