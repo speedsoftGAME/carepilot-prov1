@@ -13,6 +13,7 @@ const useStore = create(
       // UI
       activeTab: 'missions',
       toasts: [],
+      socketConnected: false,
 
       // Data
       missions: [],

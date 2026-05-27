@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>CarePilot — Ambulancier GPS</title>
+  <meta name="theme-color" content="#0A1628" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0A1628; color: #fff; min-height: 100vh; display: flex; flex-direction: column; }
+    .header { background: #0D2347; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 24px; }
+    .header h1 { font-size: 16px; font-weight: 700; }
+    .header p { font-size: 11px; color: #94A3B8; }
+    .content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .card { background: #0D2347; border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); }
+    .card h2 { font-size: 13px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+    label { display: block; font-size: 12px; color: #94A3B8; margin-bottom: 6px; margin-top: 12px; }
+    label:first-of-type { margin-top: 0; }
+    input, select { width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; color: #fff; font-size: 15px; outline: none; transition: border-color 0.2s; }
+    input:focus, select:focus { border-color: #1565C0; }
+    select option { background: #0D2347; }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: #1565C0; color: #fff; }
+    .btn-primary:hover { background: #1976D2; }
+    .btn-primary:disabled { background: #374151; cursor: not-allowed; }
+    .btn-danger { background: #D32F2F; color: #fff; }
+    .btn-success { background: #2E7D32; color: #fff; }
+    .status-box { border-radius: 12px; padding: 14px; text-align: center; transition: all 0.3s; }
+    .status-off { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+    .status-on { background: rgba(0,200,83,0.15); border: 1px solid #00C853; }
+    .status-on .status-dot { background: #00C853; }
+    .status-err { background: rgba(244,67,54,0.15); border: 1px solid #F44336; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #94A3B8; display: inline-block; margin-right: 8px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .coords { font-size: 11px; color: #94A3B8; font-family: monospace; margin-top: 4px; }
+    .log { font-size: 11px; color: #64748B; font-family: monospace; max-height: 100px; overflow-y: auto; margin-top: 8px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">🚑</div>
+    <div>
+      <h1>CarePilot Ambulancier</h1>
+      <p>Transmission GPS temps réel</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Connexion -->
+    <div class="card" id="loginCard">
+      <h2>Identification</h2>
+      <label>Adresse du serveur</label>
+      <input id="serverUrl" type="url" placeholder="https://votre-api.railway.app" />
+      <label>Token d'authentification</label>
+      <input id="token" type="password" placeholder="Coller votre token JWT" />
+      <label>Véhicule</label>
+      <input id="vehicleId" type="text" placeholder="ID du véhicule (depuis l'API)" />
+      <label>ID Entreprise</label>
+      <input id="companyId" type="text" placeholder="ID de votre entreprise" />
+      <div style="height:12px"></div>
+      <button class="btn btn-primary" onclick="connect()">Se connecter</button>
+    </div>
+
+    <!-- Statut GPS -->
+    <div class="card">
+      <h2>Statut de transmission</h2>
+      <div class="status-box status-off" id="statusBox">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Non connecté</span>
+        <div class="coords" id="coordsText"></div>
+      </div>
+      <div class="log" id="logBox"></div>
+    </div>
+
+    <!-- Contrôles -->
+    <div id="controls" style="display:none">
+      <button class="btn btn-success" id="startBtn" onclick="startGPS()" style="margin-bottom:10px">
+        📍 Démarrer la transmission GPS
+      </button>
+      <button class="btn btn-danger" id="stopBtn" onclick="stopGPS()" style="display:none">
+        ⏹ Arrêter la transmission
+      </button>
+      <div style="height:10px"></div>
+      <button class="btn btn-primary" onclick="disconnect()" style="background:#374151">Se déconnecter</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    let socket = null;
+    let watchId = null;
+    let vehicleId = '';
+    let companyId = '';
+
+    function log(msg) {
+      const box = document.getElementById('logBox');
+      const time = new Date().toLocaleTimeString('fr-FR');
+      box.innerHTML = `[${time}] ${msg}\n` + box.innerHTML;
+    }
+
+    function setStatus(state, text, coords) {
+      const box = document.getElementById('statusBox');
+      box.className = 'status-box status-' + state;
+      document.getElementById('statusText').textContent = text;
+      document.getElementById('coordsText').textContent = coords || '';
+    }
+
+    function connect() {
+      const serverUrl = document.getElementById('serverUrl').value.trim();
+      const token = document.getElementById('token').value.trim();
+      vehicleId = document.getElementById('vehicleId').value.trim();
+      companyId = document.getElementById('companyId').value.trim();
+
+      if (!serverUrl || !token || !vehicleId || !companyId) {
+        alert('Tous les champs sont requis.');
+        return;
+      }
+
+      socket = io(serverUrl, { auth: { token }, transports: ['websocket', 'polling'] });
+
+      socket.on('connect', () => {
+        socket.emit('join', { companyId, token });
+        setStatus('on', '● Connecté au serveur', '');
+        log('Connexion Socket.io établie');
+        document.getElementById('loginCard').style.display = 'none';
+        document.getElementById('controls').style.display = 'block';
+      });
+
+      socket.on('disconnect', () => {
+        setStatus('err', '✕ Déconnecté', '');
+        log('Connexion perdue');
+      });
+
+      socket.on('connect_error', (err) => {
+        setStatus('err', '✕ Erreur : ' + err.message, '');
+        log('Erreur connexion : ' + err.message);
+      });
+    }
+
+    function startGPS() {
+      if (!navigator.geolocation) {
+        alert('La géolocalisation n\'est pas disponible sur cet appareil.');
+        return;
+      }
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('stopBtn').style.display = 'block';
+
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const acc = Math.round(pos.coords.accuracy);
+
+          socket.emit('vehicle:position', { vehicleId, lat, lng, companyId });
+          setStatus('on', '📍 Transmission active', `${lat.toFixed(5)}°N, ${lng.toFixed(5)}°E — ±${acc}m`);
+          log(`Position envoyée : ${lat.toFixed(5)}, ${lng.toFixed(5)} (±${acc}m)`);
+        },
+        (err) => {
+          setStatus('err', '⚠ GPS : ' + err.message, '');
+          log('Erreur GPS : ' + err.message);
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+      );
+    }
+
+    function stopGPS() {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      document.getElementById('startBtn').style.display = 'block';
+      document.getElementById('stopBtn').style.display = 'none';
+      setStatus('on', '● Connecté (GPS arrêté)', '');
+      log('Transmission GPS arrêtée');
+    }
+
+    function disconnect() {
+      stopGPS();
+      if (socket) { socket.disconnect(); socket = null; }
+      document.getElementById('loginCard').style.display = 'block';
+      document.getElementById('controls').style.display = 'none';
+      setStatus('off', 'Non connecté', '');
+      log('Déconnexion');
+    }
+
+    // Pré-remplir l'URL depuis l'environnement si disponible
+    const savedUrl = localStorage.getItem('cp_server_url');
+    if (savedUrl) document.getElementById('serverUrl').value = savedUrl;
+    document.getElementById('serverUrl').addEventListener('blur', () => {
+      localStorage.setItem('cp_server_url', document.getElementById('serverUrl').value);
+    });
+  </script>
+</body>
+</html>

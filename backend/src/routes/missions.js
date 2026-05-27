@@ -89,6 +89,18 @@ router.post('/', async (req, res) => {
       include: { vehicle: { select: { id: true, name: true, type: true, status: true } } },
     });
 
+    // Notification push si mission urgente
+    if (priority === 'urgent') {
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`company:${req.user.companyId}`).emit('notification', {
+          type: 'urgent',
+          title: '🚨 Mission urgente',
+          message: `${patient} — ${from} → ${to}`,
+        });
+      }
+    }
+
     res.status(201).json(mission);
   } catch (err) {
     console.error('Erreur POST /missions:', err);
@@ -167,6 +179,25 @@ router.patch('/:id/status', async (req, res) => {
         }
       }
 
+      // Crée automatiquement un bon de transport quand la mission est terminée
+      if (status === 'done' && existing.status !== 'done') {
+        const year = new Date().getFullYear();
+        const btCount = await tx.bonTransport.count({ where: { companyId: req.user.companyId } });
+        const numero = `BT-${year}-${String(btCount + 1).padStart(3, '0')}`;
+        await tx.bonTransport.create({
+          data: {
+            numero, missionId: existing.id,
+            patient: existing.patient,
+            nss: existing.nss || null, mutuelle: existing.mutuelle || null,
+            numMutuelle: existing.numMutuelle || null, ddn: existing.ddn || null,
+            date: existing.date, from: existing.from, to: existing.to,
+            type: existing.type, trajet: existing.trajet,
+            amount: existing.ca || 0, notes: existing.notes || null,
+            status: 'pending', companyId: req.user.companyId,
+          },
+        });
+      }
+
       return updated;
     });
 
@@ -199,6 +230,17 @@ router.patch('/:id/vehicle', async (req, res) => {
       data: { vehicleId: vehicleId || null },
       include: { vehicle: { select: { id: true, name: true, type: true, status: true } } },
     });
+
+    if (vehicleId) {
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`company:${req.user.companyId}`).emit('notification', {
+          type: 'info',
+          title: '🚑 Véhicule assigné',
+          message: `${mission.vehicle?.name || vehicleId} → Mission ${existing.numero}`,
+        });
+      }
+    }
 
     res.json(mission);
   } catch (err) {

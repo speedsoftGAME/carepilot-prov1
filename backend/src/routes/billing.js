@@ -216,6 +216,89 @@ router.post('/checkout', async (req, res) => {
   }
 });
 
+// ─── Bons de Transport ──────────────────────────────────────────────────────
+
+// GET /api/billing/bt?month=YYYY-MM
+router.get('/bt', async (req, res) => {
+  try {
+    const month = req.query.month || new Date().toISOString().slice(0, 7)
+    const bts = await prisma.bonTransport.findMany({
+      where: { companyId: req.user.companyId, date: { startsWith: month } },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json(bts)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
+// POST /api/billing/bt
+router.post('/bt', async (req, res) => {
+  try {
+    const { patient, date, from, to, amount, type, trajet, nss, mutuelle, numMutuelle, ddn, missionId, notes } = req.body
+    if (!patient || !date) return res.status(400).json({ error: 'patient et date requis' })
+
+    const year = new Date().getFullYear()
+    const count = await prisma.bonTransport.count({ where: { companyId: req.user.companyId } })
+    const numero = `BT-${year}-${String(count + 1).padStart(3, '0')}`
+
+    const bt = await prisma.bonTransport.create({
+      data: {
+        numero, patient, date,
+        from: from || null, to: to || null,
+        amount: parseFloat(amount) || 0,
+        type: type || null, trajet: trajet || null,
+        nss: nss || null, mutuelle: mutuelle || null, numMutuelle: numMutuelle || null, ddn: ddn || null,
+        missionId: missionId || null, notes: notes || null,
+        status: 'pending', companyId: req.user.companyId,
+      },
+    })
+    res.status(201).json(bt)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
+// PATCH /api/billing/bt/:id/status
+router.patch('/bt/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body
+    if (!['pending', 'sent', 'validated'].includes(status)) return res.status(400).json({ error: 'Statut invalide' })
+    const bt = await prisma.bonTransport.findFirst({ where: { id: req.params.id, companyId: req.user.companyId } })
+    if (!bt) return res.status(404).json({ error: 'BT introuvable' })
+    const updated = await prisma.bonTransport.update({ where: { id: req.params.id }, data: { status } })
+    res.json(updated)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
+// GET /api/billing/bt/:id/pdf
+router.get('/bt/:id/pdf', async (req, res) => {
+  try {
+    const bt = await prisma.bonTransport.findFirst({ where: { id: req.params.id, companyId: req.user.companyId } })
+    if (!bt) return res.status(404).json({ error: 'BT introuvable' })
+
+    const company = await prisma.company.findUnique({
+      where: { id: req.user.companyId },
+      select: { name: true, address: true, phone: true },
+    })
+
+    const { generateBTPDF } = require('../services/pdfService')
+    const pdfBuffer = await generateBTPDF(bt, company)
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="BT-${bt.numero}.pdf"`)
+    res.send(pdfBuffer)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
 // POST /api/billing/portal — ouvre le portail client Stripe (gérer/annuler l'abonnement)
 router.post('/portal', async (req, res) => {
   try {
