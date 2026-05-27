@@ -9,7 +9,6 @@ import MissionsPanel from './panels/MissionsPanel.jsx'
 import FlottePanel from './panels/FlottePanel.jsx'
 import CartePanel from './panels/CartePanel.jsx'
 import GPSPanel from './panels/GPSPanel.jsx'
-import ElisaPanel from './panels/ElisaPanel.jsx'
 import PointeusePanel from './panels/PointeusePanel.jsx'
 import PatientsPanel from './panels/PatientsPanel.jsx'
 import EtablissementsPanel from './panels/EtablissementsPanel.jsx'
@@ -26,7 +25,6 @@ const PANELS = {
   flotte:         <FlottePanel />,
   gps:            <GPSPanel />,
   carte:          <CartePanel />,
-  elisa:          <ElisaPanel />,
   pointeuse:      <PointeusePanel />,
   patients:       <PatientsPanel />,
   etablissements: <EtablissementsPanel />,

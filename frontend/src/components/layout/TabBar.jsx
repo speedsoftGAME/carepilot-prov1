@@ -5,7 +5,6 @@ const TABS = [
   { id: 'flotte',          label: 'Flotte',          icon: '🚐' },
   { id: 'gps',             label: 'GPS',             icon: '📍' },
   { id: 'carte',           label: 'Carte',           icon: '🗺️' },
-  { id: 'elisa',           label: 'Élisa',           icon: '📡' },
   { id: 'pointeuse',       label: 'Pointeuse',       icon: '⏱️' },
   { id: 'patients',        label: 'Patients',        icon: '👤' },
   { id: 'etablissements',  label: 'Établissements',  icon: '🏥' },
