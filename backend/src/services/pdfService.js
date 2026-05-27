@@ -76,7 +76,14 @@ function generateBTPDF(bt, company) {
 
     doc.rect(310, 498, 235, 80).strokeColor('#E2E8F0').lineWidth(1).stroke()
     doc.fillColor(GRAY).fontSize(8).font('Helvetica').text('Signature & cachet', 320, 508)
-    doc.fillColor('#CBD5E1').fontSize(8).text('(signature du patient)', 320, 555)
+    if (bt.signature) {
+      try {
+        const imgBuf = Buffer.from(bt.signature.replace(/^data:image\/png;base64,/, ''), 'base64')
+        doc.image(imgBuf, 315, 518, { width: 220, height: 55 })
+      } catch {}
+    } else {
+      doc.fillColor('#CBD5E1').fontSize(8).text('(signature du patient)', 320, 555)
+    }
 
     // ── Notes ────────────────────────────────────────────────────
     if (bt.notes) {

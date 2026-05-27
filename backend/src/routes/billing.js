@@ -299,6 +299,69 @@ router.get('/bt/:id/pdf', async (req, res) => {
   }
 })
 
+// POST /api/billing/bt/:id/signature — enregistrer la signature patient
+router.post('/bt/:id/signature', async (req, res) => {
+  try {
+    const { signature } = req.body
+    if (!signature) return res.status(400).json({ error: 'Signature requise' })
+    const bt = await prisma.bonTransport.findFirst({ where: { id: req.params.id, companyId: req.user.companyId } })
+    if (!bt) return res.status(404).json({ error: 'BT introuvable' })
+    const updated = await prisma.bonTransport.update({ where: { id: req.params.id }, data: { signature } })
+    res.json(updated)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
+// GET /api/billing/export-sage?month=YYYY-MM — export format Sage
+router.get('/export-sage', async (req, res) => {
+  try {
+    const month = req.query.month || new Date().toISOString().slice(0, 7)
+    const bts = await prisma.bonTransport.findMany({
+      where: { companyId: req.user.companyId, date: { startsWith: month } },
+      orderBy: { date: 'asc' },
+    })
+    const rows = ['JournalCode,EcritureDate,PieceRef,CompteNum,CompteLib,Debit,Credit,EcritureLib']
+    for (const bt of bts) {
+      const lib = `"Transport ${bt.patient}"`
+      const amt = bt.amount.toFixed(2)
+      rows.push(`VTE,${bt.date},${bt.numero},706100,"Prestations transport",0.00,${amt},${lib}`)
+      rows.push(`VTE,${bt.date},${bt.numero},411000,"${bt.patient}",${amt},0.00,${lib}`)
+    }
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="sage-${month}.csv"`)
+    res.send('﻿' + rows.join('\n'))
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
+// GET /api/billing/export-ebp?month=YYYY-MM — export format EBP
+router.get('/export-ebp', async (req, res) => {
+  try {
+    const month = req.query.month || new Date().toISOString().slice(0, 7)
+    const bts = await prisma.bonTransport.findMany({
+      where: { companyId: req.user.companyId, date: { startsWith: month } },
+      orderBy: { date: 'asc' },
+    })
+    const rows = ['Date;Journal;Pièce;Compte;Libellé;Débit;Crédit']
+    for (const bt of bts) {
+      const d = bt.date.split('-').reverse().join('/')
+      const amt = bt.amount.toFixed(2).replace('.', ',')
+      rows.push(`${d};VTE;${bt.numero};706100;Prestations transport;0,00;${amt}`)
+      rows.push(`${d};VTE;${bt.numero};411000;${bt.patient};${amt};0,00`)
+    }
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="ebp-${month}.csv"`)
+    res.send('﻿' + rows.join('\n'))
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
 // POST /api/billing/portal — ouvre le portail client Stripe (gérer/annuler l'abonnement)
 router.post('/portal', async (req, res) => {
   try {

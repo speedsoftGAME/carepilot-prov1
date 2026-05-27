@@ -166,6 +166,7 @@ model BonTransport {
   trajet      String?
   amount      Float    @default(0)
   notes       String?
+  signature   String?
   status      String   @default("pending")
   companyId   String
   company     Company  @relation(fields: [companyId], references: [id])

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { billingApi } from '../../api/billing.js'
 import useStore from '../../store/useStore.js'
+import SignatureCanvas from '../../components/shared/SignatureCanvas.jsx'
+import client from '../../api/client.js'
 
 const STATUT_STYLE = {
   pending:   { label: 'En attente', bg: '#FF6D0022', color: '#FF6D00' },
@@ -17,6 +19,7 @@ export default function FacturationPanel() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ patient: '', date: new Date().toISOString().split('T')[0], from: '', to: '', amount: '', type: 'AMB', trajet: 'aller', nss: '', mutuelle: '' })
   const [saving, setSaving] = useState(false)
+  const [signBT, setSignBT] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -62,6 +65,26 @@ export default function FacturationPanel() {
     window.open(`${apiUrl}/api/billing/bt/${bt.id}/pdf?token=${token}`, '_blank')
   }
 
+  const handleSignature = async (signature) => {
+    try {
+      const updated = await client.post(`/api/billing/bt/${signBT.id}/signature`, { signature }).then(r => r.data)
+      setBts(prev => prev.map(b => b.id === updated.id ? updated : b))
+      setSignBT(null)
+      addToast('Signature enregistrée ✓', 'success')
+    } catch {
+      addToast('Erreur lors de l\'enregistrement de la signature', 'error')
+    }
+  }
+
+  const exportSage = () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    window.open(`${apiUrl}/api/billing/export-sage?month=${month}`, '_blank')
+  }
+  const exportEbp = () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    window.open(`${apiUrl}/api/billing/export-ebp?month=${month}`, '_blank')
+  }
+
   const totalCA = bts.reduce((sum, b) => sum + (b.amount || 0), 0)
 
   return (
@@ -74,6 +97,14 @@ export default function FacturationPanel() {
         <div className="flex gap-2 items-center">
           <input type="month" value={month} onChange={e => setMonth(e.target.value)}
             className="border rounded-lg px-2 py-1 text-xs" style={{ color: '#1F2937' }} />
+          <button onClick={exportSage}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold border hover:bg-gray-50" style={{ color: '#64748B' }}>
+            Sage
+          </button>
+          <button onClick={exportEbp}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold border hover:bg-gray-50" style={{ color: '#64748B' }}>
+            EBP
+          </button>
           <button onClick={() => setShowForm(true)}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: '#1565C0' }}>
             + Générer BT
@@ -169,10 +200,18 @@ export default function FacturationPanel() {
                         </select>
                       </td>
                       <td className="px-4 py-3">
-                        <button onClick={() => downloadPdf(b)}
-                          className="text-xs px-2 py-1 rounded-lg border hover:bg-gray-50 font-medium" style={{ color: '#1565C0' }}>
-                          PDF
-                        </button>
+                        <div className="flex gap-1">
+                          <button onClick={() => downloadPdf(b)}
+                            className="text-xs px-2 py-1 rounded-lg border hover:bg-gray-50 font-medium" style={{ color: '#1565C0' }}>
+                            PDF
+                          </button>
+                          <button onClick={() => setSignBT(b)}
+                            className="text-xs px-2 py-1 rounded-lg border hover:bg-gray-50 font-medium"
+                            style={{ color: b.signature ? '#00C853' : '#94A3B8' }}
+                            title={b.signature ? 'Signé ✓' : 'Signer'}>
+                            {b.signature ? '✓' : '✍'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -182,6 +221,24 @@ export default function FacturationPanel() {
           )}
         </div>
       </div>
+
+      {/* Modal signature */}
+      {signBT && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg">
+            <h3 className="font-semibold text-base mb-1" style={{ color: '#0A1628' }}>
+              Signature patient
+            </h3>
+            <p className="text-xs mb-4" style={{ color: '#64748B' }}>
+              BT {signBT.numero} — {signBT.patient}
+            </p>
+            <SignatureCanvas
+              onSave={handleSignature}
+              onCancel={() => setSignBT(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
