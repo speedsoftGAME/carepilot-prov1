@@ -1,8 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const authMiddleware = require('../middleware/auth');
+const emailService = require('../services/emailService');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -61,6 +63,9 @@ router.post('/register', async (req, res) => {
     const { company, user } = result;
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user);
+
+    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
+    emailService.sendWelcome(user.email, user.name, company.name, loginUrl).catch(() => {});
 
     res.status(201).json({
       accessToken,
@@ -137,6 +142,53 @@ router.post('/refresh', async (req, res) => {
   } catch (err) {
     console.error('Erreur refresh:', err);
     res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+// POST /api/auth/forgot-password — envoie un lien de réinitialisation
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email requis' });
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.json({ message: 'Si cet email existe, un lien a été envoyé.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 3600000); // 1h
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetToken: token, resetTokenExpiry: expiry },
+    });
+
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+    await emailService.sendPasswordReset(user.email, user.name, resetUrl);
+    res.json({ message: 'Si cet email existe, un lien a été envoyé.' });
+  } catch (err) {
+    console.error('Erreur forgot-password:', err);
+    res.status(500).json({ error: 'Erreur interne' });
+  }
+});
+
+// POST /api/auth/reset-password — réinitialise le mot de passe via token
+router.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Token et mot de passe requis' });
+  if (password.length < 8) return res.status(400).json({ error: 'Mot de passe trop court (8 caractères minimum)' });
+  try {
+    const user = await prisma.user.findFirst({
+      where: { resetToken: token, resetTokenExpiry: { gt: new Date() } },
+    });
+    if (!user) return res.status(400).json({ error: 'Lien invalide ou expiré' });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword, resetToken: null, resetTokenExpiry: null },
+    });
+    res.json({ message: 'Mot de passe réinitialisé avec succès' });
+  } catch (err) {
+    console.error('Erreur reset-password:', err);
+    res.status(500).json({ error: 'Erreur interne' });
   }
 });
 

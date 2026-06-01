@@ -15,7 +15,7 @@ export function useAuth() {
   const register = async (companyName, email, password, name) => {
     const data = await apiRegister(companyName, email, password, name)
     setAuth(data)
-    navigate('/dashboard')
+    navigate('/onboarding')
   }
 
   const logout = () => {

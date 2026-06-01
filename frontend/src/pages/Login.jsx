@@ -85,9 +85,16 @@ export default function Login() {
           </form>
 
           {mode === 'login' && (
-            <p className="text-center text-xs text-slate-400 mt-4">
-              Compte démo : admin@carepilot.fr / password123
-            </p>
+            <div className="mt-4 space-y-2 text-center">
+              <p className="text-xs text-slate-400">
+                Compte démo : admin@carepilot.fr / password123
+              </p>
+              <p className="text-xs">
+                <a href="/forgot-password" className="font-medium" style={{ color: '#1565C0' }}>
+                  Mot de passe oublié ?
+                </a>
+              </p>
+            </div>
           )}
         </div>
       </div>

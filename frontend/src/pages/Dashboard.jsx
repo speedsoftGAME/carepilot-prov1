@@ -6,6 +6,7 @@ import Header from '../components/layout/Header.jsx'
 import StatsBar from '../components/layout/StatsBar.jsx'
 import TabBar from '../components/layout/TabBar.jsx'
 import SettingsModal from '../components/settings/SettingsModal.jsx'
+import ErrorBoundary from '../components/shared/ErrorBoundary.jsx'
 
 import MissionsPanel from './panels/MissionsPanel.jsx'
 import FlottePanel from './panels/FlottePanel.jsx'
@@ -23,22 +24,24 @@ import ImperatifsPanel from './panels/ImperatifsPanel.jsx'
 import AlertesPanel from './panels/AlertesPanel.jsx'
 import ParametresPanel from './panels/ParametresPanel.jsx'
 
+const wrap = (Panel) => <ErrorBoundary><Panel /></ErrorBoundary>
+
 const PANELS = {
-  missions:       <MissionsPanel />,
-  flotte:         <FlottePanel />,
-  gps:            <GPSPanel />,
-  carte:          <CartePanel />,
-  pointeuse:      <PointeusePanel />,
-  patients:       <PatientsPanel />,
-  etablissements: <EtablissementsPanel />,
-  facturation:    <FacturationPanel />,
-  ca:             <CAPanel />,
-  heures:         <HeuresPanel />,
-  planning:       <PlanningPanel />,
-  j1:             <J1Panel />,
-  imperatifs:     <ImperatifsPanel />,
-  alertes:        <AlertesPanel />,
-  parametres:     <ParametresPanel />,
+  missions:       wrap(MissionsPanel),
+  flotte:         wrap(FlottePanel),
+  gps:            wrap(GPSPanel),
+  carte:          wrap(CartePanel),
+  pointeuse:      wrap(PointeusePanel),
+  patients:       wrap(PatientsPanel),
+  etablissements: wrap(EtablissementsPanel),
+  facturation:    wrap(FacturationPanel),
+  ca:             wrap(CAPanel),
+  heures:         wrap(HeuresPanel),
+  planning:       wrap(PlanningPanel),
+  j1:             wrap(J1Panel),
+  imperatifs:     wrap(ImperatifsPanel),
+  alertes:        wrap(AlertesPanel),
+  parametres:     wrap(ParametresPanel),
 }
 
 export default function Dashboard() {
@@ -53,7 +56,7 @@ export default function Dashboard() {
       <StatsBar />
       <TabBar />
       <div className="flex-1 overflow-hidden">
-        {PANELS[activeTab] || <MissionsPanel />}
+        {PANELS[activeTab] || wrap(MissionsPanel)}
       </div>
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
