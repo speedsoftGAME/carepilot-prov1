@@ -20,6 +20,7 @@ const useStore = create(
       missions: [],
       vehicles: [],
       sites: [],
+      unreadAlerts: 0,
 
       // Auth actions
       setAuth: (data) => set({
@@ -35,6 +36,8 @@ const useStore = create(
       setActiveTab: (tab) => set({ activeTab: tab }),
       setActiveSiteId: (id) => set({ activeSiteId: id }),
       setSites: (sites) => set({ sites }),
+
+      setUnreadAlerts: (n) => set({ unreadAlerts: n }),
 
       // Toast
       addToast: (message, type = 'info') => {

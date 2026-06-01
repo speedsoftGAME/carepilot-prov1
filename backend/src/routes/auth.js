@@ -192,6 +192,40 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// PUT /api/auth/me — mettre à jour le profil
+router.put('/me', authMiddleware, async (req, res) => {
+  try {
+    const { name } = req.body
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { name: name || undefined },
+      select: { id: true, email: true, name: true, role: true, companyId: true },
+    })
+    res.json(user)
+  } catch (err) {
+    console.error('Erreur PUT /me:', err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
+// PUT /api/auth/change-password — changer le mot de passe (authentifié)
+router.put('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Champs requis' })
+    if (newPassword.length < 8) return res.status(400).json({ error: 'Nouveau mot de passe trop court (8 min)' })
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
+    const valid = await bcrypt.compare(currentPassword, user.password)
+    if (!valid) return res.status(400).json({ error: 'Mot de passe actuel incorrect' })
+    const hashed = await bcrypt.hash(newPassword, 10)
+    await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } })
+    res.json({ message: 'Mot de passe modifié avec succès' })
+  } catch (err) {
+    console.error('Erreur change-password:', err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
 // GET /api/auth/me — retourne l'utilisateur connecté (route protégée)
 router.get('/me', authMiddleware, async (req, res) => {
   try {

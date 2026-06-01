@@ -19,6 +19,7 @@ const FILTERS = [
 export default function MissionsPanel() {
   const [filter, setFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
+  const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editMission, setEditMission] = useState(null)
   const [dispatchMission, setDispatchMission] = useState(null)
@@ -32,6 +33,20 @@ export default function MissionsPanel() {
 
   const { missions, create, update, changeStatus, assign, remove } = useMissions(params)
   useVehicles()
+
+  const filtered = search.trim()
+    ? missions.filter(m => m.patient.toLowerCase().includes(search.toLowerCase()))
+    : missions
+
+  const exportCSV = () => {
+    const p = new URLSearchParams()
+    if (dateFilter) p.set('date', dateFilter)
+    if (filter === 'urgent') p.set('priority', 'urgent')
+    else if (filter !== 'all') p.set('status', filter)
+    const url = `/api/missions/export?${p.toString()}`
+    const a = document.createElement('a')
+    a.href = url; a.download = `missions_${dateFilter || 'export'}.csv`; a.click()
+  }
 
   const openNew = () => { setEditMission(null); setModalOpen(true) }
   const openEdit = (m) => { setEditMission(m); setModalOpen(true) }
@@ -64,6 +79,15 @@ export default function MissionsPanel() {
           ))}
         </div>
 
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 Rechercher un patient..."
+          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500 w-44"
+        />
+        <button onClick={exportCSV} title="Exporter en CSV"
+          className="px-3 py-1.5 border border-slate-200 text-slate-600 text-sm rounded-lg hover:bg-slate-50 shrink-0">
+          📥 CSV
+        </button>
         <button onClick={openNew}
           className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700 flex items-center gap-1 shrink-0">
           + Nouvelle mission
@@ -72,13 +96,13 @@ export default function MissionsPanel() {
 
       {/* Liste */}
       <div className="flex-1 overflow-y-auto p-4">
-        {missions.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState icon="🚑" title="Aucune mission"
-            message={`Aucune mission ${dateFilter ? 'ce jour' : ''} pour ce filtre.`}
+            message={search ? `Aucun patient correspondant à "${search}"` : `Aucune mission ${dateFilter ? 'ce jour' : ''} pour ce filtre.`}
             action={{ label: '+ Créer une mission', onClick: openNew }} />
         ) : (
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {missions.map(m => (
+            {filtered.map(m => (
               <div key={m.id} className="relative group">
                 <MissionCard mission={m} onClick={() => openEdit(m)} onStatusChange={changeStatus} />
                 {/* Actions au survol */}

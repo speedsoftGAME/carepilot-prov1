@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { settingsApi } from '../../api/settings.js'
 import { sitesApi } from '../../api/sites.js'
 import { apiKeysApi } from '../../api/apikeys.js'
+import { usersApi } from '../../api/users.js'
 import useStore from '../../store/useStore.js'
 
-const TAB = ['Général', 'Sites', 'API', 'SAMU']
+const TAB = ['Général', 'Utilisateurs', 'Sites', 'API', 'SAMU']
 
 // ─── Section Général ────────────────────────────────────────────────────────
 function GeneralSection() {
@@ -109,6 +110,170 @@ function GeneralSection() {
           {saving ? 'Sauvegarde...' : 'Appliquer'}
         </button>
       </form>
+    </div>
+  )
+}
+
+// ─── Section Utilisateurs ────────────────────────────────────────────────────
+function UsersSection() {
+  const addToast = useStore(s => s.addToast)
+  const currentUser = useStore(s => s.user)
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ email: '', name: '', role: 'dispatcher', password: '' })
+
+  const isAdmin = currentUser?.role === 'admin'
+
+  useEffect(() => {
+    usersApi.list().then(setUsers).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    if (form.password.length < 8) { addToast('Mot de passe : 8 caractères minimum', 'error'); return }
+    setSaving(true)
+    try {
+      const created = await usersApi.create(form)
+      setUsers(prev => [...prev, created])
+      setForm({ email: '', name: '', role: 'dispatcher', password: '' })
+      setShowForm(false)
+      addToast('Utilisateur créé ✓', 'success')
+    } catch (err) { addToast(err.response?.data?.error || 'Erreur création', 'error') }
+    finally { setSaving(false) }
+  }
+
+  const handleRoleChange = async (id, role) => {
+    try {
+      const updated = await usersApi.updateRole(id, role)
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, role: updated.role } : u))
+      addToast('Rôle mis à jour ✓', 'success')
+    } catch (err) { addToast(err.response?.data?.error || 'Erreur', 'error') }
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Supprimer cet utilisateur ?')) return
+    try {
+      await usersApi.remove(id)
+      setUsers(prev => prev.filter(u => u.id !== id))
+      addToast('Utilisateur supprimé', 'success')
+    } catch (err) { addToast(err.response?.data?.error || 'Erreur', 'error') }
+  }
+
+  const ROLE_BADGE = {
+    admin:      { label: 'Administrateur', color: '#7C3AED', bg: '#EDE9FE' },
+    dispatcher: { label: 'Dispatcher',     color: '#1565C0', bg: '#DBEAFE' },
+  }
+
+  if (loading) return <div className="p-6 text-center text-sm" style={{ color: '#94A3B8' }}>Chargement...</div>
+
+  return (
+    <div className="space-y-4">
+      {!isAdmin && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm" style={{ color: '#92400E' }}>
+          ⚠ Seul un administrateur peut gérer les utilisateurs.
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm" style={{ color: '#64748B' }}>
+          {users.length} utilisateur{users.length !== 1 ? 's' : ''} dans votre espace
+        </p>
+        {isAdmin && (
+          <button onClick={() => setShowForm(true)}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+            style={{ background: '#1565C0' }}>
+            + Ajouter un utilisateur
+          </button>
+        )}
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="bg-white rounded-xl border shadow-sm p-4 space-y-3">
+          <h3 className="font-semibold text-sm" style={{ color: '#0A1628' }}>Nouvel utilisateur</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: '#64748B' }}>Email *</label>
+              <input type="email" required value={form.email} placeholder="prenom.nom@ambulances.fr"
+                onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: '#64748B' }}>Nom complet</label>
+              <input value={form.name} placeholder="Jean Dupont"
+                onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: '#64748B' }}>Rôle</label>
+              <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
+                className="w-full border rounded-lg px-3 py-2 text-sm">
+                <option value="dispatcher">Dispatcher</option>
+                <option value="admin">Administrateur</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: '#64748B' }}>Mot de passe provisoire *</label>
+              <input type="password" required minLength={8} value={form.password} placeholder="8 caractères min."
+                onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-lg text-sm border" style={{ color: '#64748B' }}>Annuler</button>
+            <button type="submit" disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style={{ background: '#1565C0' }}>
+              {saving ? 'Création...' : 'Créer'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        {users.length === 0 ? (
+          <div className="p-6 text-center text-sm" style={{ color: '#94A3B8' }}>Aucun utilisateur</div>
+        ) : users.map(u => {
+          const badge = ROLE_BADGE[u.role] || ROLE_BADGE.dispatcher
+          const isSelf = u.id === currentUser?.id
+          return (
+            <div key={u.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-0">
+              <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                style={{ background: '#1565C0' }}>
+                {(u.name || u.email)[0].toUpperCase()}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm truncate" style={{ color: '#1F2937' }}>
+                  {u.name || '—'} {isSelf && <span className="text-xs font-normal" style={{ color: '#94A3B8' }}>(vous)</span>}
+                </div>
+                <div className="text-xs truncate" style={{ color: '#64748B' }}>{u.email}</div>
+              </div>
+              {isAdmin && !isSelf ? (
+                <select value={u.role}
+                  onChange={e => handleRoleChange(u.id, e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1 font-medium"
+                  style={{ color: badge.color, background: badge.bg, borderColor: badge.color + '44' }}>
+                  <option value="dispatcher">Dispatcher</option>
+                  <option value="admin">Administrateur</option>
+                </select>
+              ) : (
+                <span className="text-xs px-2 py-1 rounded-lg font-medium"
+                  style={{ color: badge.color, background: badge.bg }}>
+                  {badge.label}
+                </span>
+              )}
+              <div className="text-xs" style={{ color: '#94A3B8' }}>
+                {new Date(u.createdAt).toLocaleDateString('fr-FR')}
+              </div>
+              {isAdmin && !isSelf && (
+                <button onClick={() => handleDelete(u.id)}
+                  className="text-xs px-2 py-1 rounded-lg border text-red-400 hover:bg-red-50">
+                  ✕
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -425,9 +590,10 @@ export default function ParametresPanel() {
 
       <div className="flex-1 overflow-y-auto p-4" style={{ background: '#F0F4FF' }}>
         {tab === 0 && <GeneralSection />}
-        {tab === 1 && <SitesSection />}
-        {tab === 2 && <ApiSection />}
-        {tab === 3 && <SamuSection />}
+        {tab === 1 && <UsersSection />}
+        {tab === 2 && <SitesSection />}
+        {tab === 3 && <ApiSection />}
+        {tab === 4 && <SamuSection />}
       </div>
     </div>
   )

@@ -27,6 +27,7 @@ const patientsRoutes = require('./routes/patients');
 const etablissementsRoutes = require('./routes/etablissements');
 const alertsRoutes = require('./routes/alerts');
 const imperatifsRoutes = require('./routes/imperatifs');
+const usersRoutes = require('./routes/users');
 
 const app = express();
 const httpServer = createServer(app);
@@ -64,6 +65,7 @@ app.use('/api/patients', patientsRoutes);
 app.use('/api/etablissements', etablissementsRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/imperatifs', imperatifsRoutes);
+app.use('/api/users', usersRoutes);
 
 // ─── Socket.io — GPS temps réel ─────────────────────────────────────────────
 const io = new Server(httpServer, {

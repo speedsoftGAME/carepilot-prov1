@@ -14,6 +14,38 @@ async function genNumero(companyId) {
   return `M-${year}-${String(count + 1).padStart(3, '0')}`;
 }
 
+// GET /api/missions/export — export CSV des missions
+router.get('/export', async (req, res) => {
+  try {
+    const { date, status, priority } = req.query
+    const where = { companyId: req.user.companyId }
+    if (date) where.date = date
+    if (status) where.status = status
+    if (priority) where.priority = priority
+    const missions = await prisma.mission.findMany({
+      where,
+      include: { vehicle: { select: { name: true } } },
+      orderBy: [{ date: 'desc' }, { time: 'asc' }],
+    })
+    const STATUS_FR = { waiting: 'En attente', in_progress: 'En cours', done: 'Terminée', cancelled: 'Annulée' }
+    const PRIO_FR   = { normal: 'Normal', urgent: 'Urgent' }
+    const header = ['Numéro', 'Date', 'Heure', 'Patient', 'De', 'Vers', 'Type', 'Trajet', 'Priorité', 'Statut', 'Véhicule', 'CA (€)', 'NSS', 'Mutuelle', 'Notes'].join(';')
+    const rows = missions.map(m => [
+      m.numero, m.date, m.time || '', m.patient, m.from, m.to, m.type, m.trajet,
+      PRIO_FR[m.priority] || m.priority, STATUS_FR[m.status] || m.status,
+      m.vehicle?.name || '', (m.ca || 0).toFixed(2), m.nss || '', m.mutuelle || '', m.notes || '',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'))
+    const csv = '﻿' + [header, ...rows].join('\r\n')
+    const filename = `missions_${date || 'export'}_${Date.now()}.csv`
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.send(csv)
+  } catch (err) {
+    console.error('Erreur export CSV:', err)
+    res.status(500).json({ error: 'Erreur interne' })
+  }
+})
+
 // GET /api/missions — liste des missions de l'entreprise
 // Query params optionnels : date, status, priority, vehicleId
 router.get('/', async (req, res) => {
