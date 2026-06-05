@@ -47,7 +47,7 @@ router.get('/export', async (req, res) => {
 })
 
 // GET /api/missions — liste des missions de l'entreprise
-// Query params optionnels : date, status, priority, vehicleId
+// Query params optionnels : date, status, priority, vehicleId, page, limit
 router.get('/', async (req, res) => {
   try {
     const { date, status, priority, vehicleId } = req.query;
@@ -58,13 +58,22 @@ router.get('/', async (req, res) => {
     if (priority) where.priority = priority;
     if (vehicleId) where.vehicleId = vehicleId;
 
-    const missions = await prisma.mission.findMany({
-      where,
-      include: { vehicle: { select: { id: true, name: true, type: true, status: true } } },
-      orderBy: [{ date: 'desc' }, { time: 'asc' }],
-    });
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 100, 200);
+    const skip = (page - 1) * limit;
 
-    res.json(missions);
+    const [missions, total] = await Promise.all([
+      prisma.mission.findMany({
+        where,
+        include: { vehicle: { select: { id: true, name: true, type: true, status: true } } },
+        orderBy: [{ date: 'desc' }, { time: 'asc' }],
+        skip,
+        take: limit,
+      }),
+      prisma.mission.count({ where }),
+    ]);
+
+    res.json({ missions, total, page, pages: Math.ceil(total / limit), limit });
   } catch (err) {
     console.error('Erreur GET /missions:', err);
     res.status(500).json({ error: 'Erreur interne du serveur' });

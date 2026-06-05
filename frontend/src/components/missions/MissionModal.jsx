@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Modal from '../shared/Modal.jsx'
 import VehiclePicker from './VehiclePicker.jsx'
 import { patientsApi } from '../../api/patients.js'
+import AddressInput from '../shared/AddressInput.jsx'
 
 const EMPTY = {
   date: new Date().toISOString().split('T')[0],
@@ -157,10 +158,10 @@ export default function MissionModal({ open, onClose, mission, onSave }) {
               </Field>
             </div>
             <Field label="Prise en charge" required>
-              <Input value={form.from} onChange={set('from')} placeholder="Adresse de départ" required />
+              <AddressInput value={form.from} onChange={v => setForm(f => ({ ...f, from: v }))} placeholder="Adresse de départ" required />
             </Field>
             <Field label="Destination" required>
-              <Input value={form.to} onChange={set('to')} placeholder="Adresse d'arrivée" required />
+              <AddressInput value={form.to} onChange={v => setForm(f => ({ ...f, to: v }))} placeholder="Adresse d'arrivée" required />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="CA (€)">

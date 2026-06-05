@@ -1,6 +1,12 @@
 import client from './client.js'
 
 export const getMissions = (params) =>
+  client.get('/api/missions', { params }).then(r => {
+    // Handle both paginated ({ missions, total }) and legacy array responses
+    return Array.isArray(r.data) ? r.data : r.data.missions
+  })
+
+export const getMissionsPaginated = (params) =>
   client.get('/api/missions', { params }).then(r => r.data)
 
 export const getMission = (id) =>
