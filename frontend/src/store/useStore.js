@@ -37,7 +37,9 @@ const useStore = create(
       setActiveSiteId: (id) => set({ activeSiteId: id }),
       setSites: (sites) => set({ sites }),
 
-      setUnreadAlerts: (n) => set({ unreadAlerts: n }),
+      setUnreadAlerts: (nOrFn) => set(s => ({
+        unreadAlerts: typeof nOrFn === 'function' ? nOrFn(s.unreadAlerts) : nOrFn,
+      })),
 
       // Toast
       addToast: (message, type = 'info') => {

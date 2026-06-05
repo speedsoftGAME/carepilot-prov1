@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Modal from '../shared/Modal.jsx'
 import VehiclePicker from './VehiclePicker.jsx'
+import { patientsApi } from '../../api/patients.js'
 
 const EMPTY = {
   date: new Date().toISOString().split('T')[0],
@@ -34,6 +35,53 @@ function Select({ value, onChange, children }) {
       className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
       {children}
     </select>
+  )
+}
+
+function PatientSearch({ onSelect }) {
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState([])
+  const [open, setOpen] = useState(false)
+  const timer = useRef(null)
+
+  const search = (val) => {
+    setQ(val)
+    clearTimeout(timer.current)
+    if (!val.trim()) { setResults([]); setOpen(false); return }
+    timer.current = setTimeout(async () => {
+      try {
+        const data = await patientsApi.search(val)
+        setResults(data.slice(0, 6))
+        setOpen(data.length > 0)
+      } catch {}
+    }, 300)
+  }
+
+  return (
+    <div className="relative mb-4">
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+        <input
+          value={q}
+          onChange={e => search(e.target.value)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder="Rechercher un patient existant..."
+          className="w-full border border-blue-200 bg-blue-50 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+        />
+      </div>
+      {open && (
+        <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+          {results.map(p => (
+            <button key={p.id} type="button" onMouseDown={() => { onSelect(p); setQ(''); setOpen(false) }}
+              className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b last:border-0 text-sm">
+              <span className="font-semibold text-slate-800">{p.nom} {p.prenom}</span>
+              {p.ddn && <span className="ml-2 text-xs text-slate-500">né(e) {p.ddn}</span>}
+              {p.nss && <span className="ml-2 text-xs text-slate-400">{p.nss.slice(0, 7)}…</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -138,6 +186,19 @@ export default function MissionModal({ open, onClose, mission, onSave }) {
         {/* Onglet Patient */}
         {tab === 'patient' && (
           <div className="space-y-4">
+            <PatientSearch onSelect={p => setForm(f => ({
+              ...f,
+              patNom: p.nom || '',
+              patPrenom: p.prenom || '',
+              patient: `${p.nom}${p.prenom ? ' ' + p.prenom : ''}`,
+              nss: p.nss || '',
+              mutuelle: p.mutuelle || '',
+              ddn: p.ddn || '',
+              phone: p.tel || '',
+              adresse: p.adresse || '',
+              medecin: p.medecin || '',
+              obs: p.obs || '',
+            }))} />
             <div className="grid grid-cols-2 gap-3">
               <Field label="Nom"><Input value={form.patNom} onChange={set('patNom')} placeholder="Dupont" /></Field>
               <Field label="Prénom"><Input value={form.patPrenom} onChange={set('patPrenom')} placeholder="Jean" /></Field>
