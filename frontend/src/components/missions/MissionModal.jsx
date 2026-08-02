@@ -86,16 +86,17 @@ function PatientSearch({ onSelect }) {
   )
 }
 
-export default function MissionModal({ open, onClose, mission, onSave }) {
+export default function MissionModal({ open, onClose, mission, prefill, onSave }) {
   const [form, setForm] = useState(EMPTY)
   const [tab, setTab] = useState('infos')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (mission) setForm({ ...EMPTY, ...mission, vehicleId: mission.vehicleId || '', ca: mission.ca || '' })
+    else if (prefill) setForm({ ...EMPTY, ...prefill, vehicleId: '', ca: prefill.ca || '' })
     else setForm(EMPTY)
     setTab('infos')
-  }, [mission, open])
+  }, [mission, prefill, open])
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target?.value ?? e }))
   const setVal = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -114,7 +115,7 @@ export default function MissionModal({ open, onClose, mission, onSave }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={mission ? `Modifier ${mission.numero}` : 'Nouvelle mission'} size="lg">
+    <Modal open={open} onClose={onClose} title={mission ? `Modifier ${mission.numero}` : prefill ? `Dupliquer — ${prefill.patient || 'mission'}` : 'Nouvelle mission'} size="lg">
       <form onSubmit={handleSubmit}>
         {/* Onglets */}
         <div className="flex gap-1 mb-5 bg-slate-100 rounded-lg p-1">
